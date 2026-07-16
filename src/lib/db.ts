@@ -95,6 +95,64 @@ export function ensureSchema(): Promise<void> {
   return globalForDb.schemaReady;
 }
 
+export type StoredRequest = {
+  id: number;
+  civility: "mme" | "m";
+  last_name: string;
+  first_name: string;
+  email: string;
+  phone: string | null;
+  request_type: "visite" | "rappel" | "photos";
+  message: string;
+  created_at: string;
+  availabilities: Array<{ day: string; hour: number; minute: number }>;
+};
+
+/**
+ * Reads back the saved requests, most recent first, each with its slots.
+ *
+ * Two queries then a group in JS, rather than one JOIN: a JOIN would repeat
+ * every request column once per availability, and we would have to
+ * de-duplicate it here anyway.
+ */
+export async function listContactRequests(limit = 50): Promise<StoredRequest[]> {
+  await ensureSchema();
+  const pool = getPool();
+
+  // `query` (not `execute`): LIMIT placeholders and `IN (?)` array expansion
+  // are handled by the driver's escaping, not by MySQL prepared statements.
+  const [requests] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT id, civility, last_name, first_name, email, phone,
+            request_type, message, created_at
+       FROM contact_requests
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?`,
+    [Math.max(1, Math.min(limit, 200))],
+  );
+
+  if (requests.length === 0) return [];
+
+  const [slots] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT request_id, day, hour, minute
+       FROM availabilities
+      WHERE request_id IN (?)
+      ORDER BY id`,
+    [requests.map((r) => r.id)],
+  );
+
+  const byRequest = new Map<number, StoredRequest["availabilities"]>();
+  for (const slot of slots) {
+    const list = byRequest.get(slot.request_id) ?? [];
+    list.push({ day: slot.day, hour: slot.hour, minute: slot.minute });
+    byRequest.set(slot.request_id, list);
+  }
+
+  return requests.map((r) => ({
+    ...(r as Omit<StoredRequest, "availabilities">),
+    availabilities: byRequest.get(r.id) ?? [],
+  }));
+}
+
 /**
  * Persists a request and its availabilities atomically — a request must never
  * land without the slots the visitor picked.

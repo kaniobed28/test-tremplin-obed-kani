@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AvailabilityPicker } from "./AvailabilityPicker";
@@ -93,13 +94,21 @@ export function ContactForm() {
           Merci, votre demande (n°{status.id}) a bien été enregistrée. L’agence
           vous répond sous 48&nbsp;heures.
         </p>
-        <button
-          type="button"
-          onClick={() => setStatus({ state: "idle" })}
-          className="mt-2 rounded-full bg-white/15 px-6 py-2.5 text-sm font-semibold text-white ring-1 ring-white/40 transition hover:bg-white/25"
-        >
-          Envoyer une autre demande
-        </button>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setStatus({ state: "idle" })}
+            className="rounded-full bg-white/15 px-6 py-2.5 text-sm font-semibold text-white ring-1 ring-white/40 transition hover:bg-white/25"
+          >
+            Envoyer une autre demande
+          </button>
+          <Link
+            href="/demandes"
+            className="rounded-full px-6 py-2.5 text-sm font-semibold text-white/80 underline-offset-4 transition hover:text-white hover:underline"
+          >
+            Voir les demandes enregistrées
+          </Link>
+        </div>
       </div>
     );
   }
