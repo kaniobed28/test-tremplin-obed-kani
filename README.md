@@ -97,7 +97,7 @@ La maquette est pensée pour le desktop ; les deux colonnes s’empilent sous 10
 | **Zod** | 4 | Un schéma unique décrit les règles métier ; il valide côté client **et** côté serveur, donc les deux ne peuvent pas diverger. |
 | **@hookform/resolvers** | 5 | Fait le pont entre Zod et React Hook Form, pour ne pas réécrire les règles de validation dans le formulaire. |
 | **MySQL** (Docker) | 8.4 | La base **fournie avec le dépôt** (`docker-compose.yml`). Le sujet laisse le choix de la base ; utiliser celle qui est mise à disposition évite au correcteur d’installer quoi que ce soit d’autre. |
-| **mysql2** | 3.23 | Driver MySQL de référence pour Node : requêtes préparées (donc à l’abri des injections SQL), API `promise` et gestion d’un pool de connexions. |
+| **mysql2** | 3.23 | Driver MySQL de référence pour Node : placeholders `?` (donc à l’abri des injections SQL), API `promise` et gestion d’un pool de connexions. |
 | **Montserrat** (next/font) | — | Sans-serif géométrique le plus proche de la typo de la maquette, chargée en self-host par `next/font` (pas de requête vers Google). |
 
 ### Choix structurants
@@ -117,9 +117,12 @@ La maquette est pensée pour le desktop ; les deux colonnes s’empilent sous 10
   1-N (`availabilities.request_id`, avec `ON DELETE CASCADE`), écrite dans la même
   transaction que la demande. L’agence peut ainsi filtrer les demandes par créneau, ce
   qu’un JSON aplati dans une colonne interdirait.
-- **Requêtes préparées et `utf8mb4`.** Toutes les valeurs passent par des requêtes
-  préparées (`?`), jamais par de la concaténation de chaînes. Les tables sont en
-  `utf8mb4`, vérifié : « Lefèvre » et « J’aimerais… » se relisent à l’identique.
+- **Aucune concaténation SQL, et `utf8mb4`.** Toute valeur passe par un placeholder `?` :
+  `execute()` (vraies requêtes préparées côté MySQL) pour l’insertion d’une demande, et
+  `query()` (échappement par le driver) aux deux endroits où MySQL n’accepte pas de
+  paramètre préparé — la liste `VALUES ?` et le `IN (?)`. Dans les deux cas, rien n’est
+  concaténé dans la requête. Les tables sont en `utf8mb4`, vérifié : « Lefèvre » et
+  « J’aimerais… » se relisent à l’identique.
 - **Accessibilité.** Les libellés de la maquette ne vivent que dans les *placeholders* ;
   j’ai gardé de vrais `<label>` (en `sr-only`), des `<fieldset>/<legend>` pour les
   groupes de radios, `aria-invalid` + `role="alert"` sur les erreurs, et des contrôles
@@ -144,8 +147,11 @@ npm run dev
 
 L’application est disponible sur **http://localhost:3000**.
 
-Les tables sont créées automatiquement au premier envoi (`CREATE TABLE IF NOT EXISTS`) :
-aucune migration à lancer. Les données MySQL vivent dans `./mysql`, ignoré par Git.
+Les tables sont créées automatiquement à la première utilisation (`CREATE TABLE IF NOT
+EXISTS`) : aucune migration à lancer. Les données MySQL vivent dans `./mysql`, ignoré par
+Git.
+
+Deux pages : le formulaire sur `/`, et `/demandes` pour relire ce qui a été enregistré.
 
 Pour tout arrêter :
 
@@ -256,6 +262,12 @@ pris du temps :
   au-dessus de la photo. Ce sont ces détails qui font qu’une intégration ressemble ou non
   à la maquette.
 
+La leçon que j’en retire : mesurer plutôt qu’estimer à l’œil. J’avais dessiné le bouton
+« Ajouter dispo » comme un cercle ; en relevant les pixels de la maquette, c’est une
+pastille de 82×30, exactement la hauteur des sélecteurs voisins — la règle n’était donc pas
+« 30 px » mais « la hauteur des sélecteurs ». Même chose pour son violet, prélevé à la
+pipette (`#3f1486`) au lieu d’être approché avec la palette Tailwind.
+
 La maquette laisse aussi des zones d’ombre (quels jours ? quelle amplitude horaire ?) ;
 j’ai tranché en me mettant à la place de l’agence et je l’ai documenté ci-dessus.
 
@@ -274,6 +286,13 @@ nouveau à chaque modification de fichier jusqu’à saturer MySQL.
 J’ai aussi découvert quelques évolutions de **Next.js 16** par rapport aux versions que je
 connaissais : l’App Router et les Route Handlers, et `next/font` qui héberge la police
 localement.
+
+Le cas le plus instructif est la page `/demandes`. Le réflexe que j’avais était
+`export const dynamic = "force-dynamic"` pour forcer une lecture à chaque requête ; la
+documentation de la version installée montre que cette option disparaît (retirée avec les
+Cache Components) au profit de `connection()`. Sans ça, la page aurait été *prérendue au
+build* : elle aurait affiché en ligne une liste vide, figée, quoi qu’on envoie. La sortie
+de `npm run build` le confirme — `/demandes` est bien marquée `ƒ (Dynamic)`.
 
 Côté Docker, j’ai appris l’intérêt du couple `healthcheck` / `docker compose up --wait` :
 sans lui, MySQL 8.4 met une vingtaine de secondes avant d’accepter la moindre connexion,
