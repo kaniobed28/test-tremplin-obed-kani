@@ -1,99 +1,134 @@
-import Database from "better-sqlite3";
-import { mkdirSync } from "node:fs";
-import path from "node:path";
+import mysql from "mysql2/promise";
 import type { ContactRequest } from "./schema";
 
-const DB_PATH =
-  process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "contacts.db");
-
 /**
- * Next.js hot-reloads modules in dev, which would open a new SQLite handle on
- * every reload. Cache the connection on globalThis so we keep exactly one.
+ * Connection settings default to the docker-compose service, so the project
+ * runs with `docker compose up -d && npm run dev` and no .env file.
  */
-const globalForDb = globalThis as unknown as {
-  db?: Database.Database;
+const config = {
+  host: process.env.DB_HOST ?? "127.0.0.1",
+  port: Number(process.env.DB_PORT ?? 3306),
+  user: process.env.DB_USER ?? "root",
+  password: process.env.DB_PASSWORD ?? "verysecurepassword",
+  database: process.env.DB_NAME ?? "majordhom",
 };
 
-function createConnection(): Database.Database {
-  mkdirSync(path.dirname(DB_PATH), { recursive: true });
+/**
+ * Next.js hot-reloads modules in dev, which would open a new pool on every
+ * reload until MySQL refuses connections. Cache it on globalThis.
+ */
+const globalForDb = globalThis as unknown as {
+  pool?: mysql.Pool;
+  schemaReady?: Promise<void>;
+};
 
-  const db = new Database(DB_PATH);
-
-  // WAL lets reads run concurrently with the write of a form submission.
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS contact_requests (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      civility     TEXT    NOT NULL CHECK (civility IN ('mme', 'm')),
-      last_name    TEXT    NOT NULL,
-      first_name   TEXT    NOT NULL,
-      email        TEXT    NOT NULL,
-      phone        TEXT,
-      request_type TEXT    NOT NULL CHECK (request_type IN ('visite', 'rappel', 'photos')),
-      message      TEXT    NOT NULL,
-      created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS availabilities (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      request_id INTEGER NOT NULL REFERENCES contact_requests(id) ON DELETE CASCADE,
-      day        TEXT    NOT NULL,
-      hour       INTEGER NOT NULL CHECK (hour BETWEEN 0 AND 23),
-      minute     INTEGER NOT NULL CHECK (minute BETWEEN 0 AND 59)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_availabilities_request
-      ON availabilities(request_id);
-    CREATE INDEX IF NOT EXISTS idx_contact_requests_created
-      ON contact_requests(created_at DESC);
-  `);
-
-  return db;
+export function getPool(): mysql.Pool {
+  if (!globalForDb.pool) {
+    globalForDb.pool = mysql.createPool({
+      ...config,
+      waitForConnections: true,
+      connectionLimit: 10,
+      // Availabilities are inserted with a multi-row VALUES list, so the
+      // driver must keep numbers as numbers rather than strings.
+      supportBigNumbers: true,
+      dateStrings: true,
+    });
+  }
+  return globalForDb.pool;
 }
 
-export function getDb(): Database.Database {
-  if (!globalForDb.db) globalForDb.db = createConnection();
-  return globalForDb.db;
+/**
+ * Creates the tables on first use. Idempotent, and memoised so concurrent
+ * requests don't race to run the DDL.
+ */
+export function ensureSchema(): Promise<void> {
+  if (!globalForDb.schemaReady) {
+    globalForDb.schemaReady = (async () => {
+      const pool = getPool();
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS contact_requests (
+          id           INT AUTO_INCREMENT PRIMARY KEY,
+          civility     ENUM('mme', 'm')                     NOT NULL,
+          last_name    VARCHAR(80)                          NOT NULL,
+          first_name   VARCHAR(80)                          NOT NULL,
+          email        VARCHAR(150)                         NOT NULL,
+          phone        VARCHAR(20)                          NULL,
+          request_type ENUM('visite', 'rappel', 'photos')   NOT NULL,
+          message      TEXT                                 NOT NULL,
+          created_at   DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_contact_requests_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS availabilities (
+          id         INT AUTO_INCREMENT PRIMARY KEY,
+          request_id INT         NOT NULL,
+          day        VARCHAR(10) NOT NULL,
+          hour       TINYINT     NOT NULL,
+          minute     TINYINT     NOT NULL,
+          CONSTRAINT fk_availabilities_request
+            FOREIGN KEY (request_id) REFERENCES contact_requests(id)
+            ON DELETE CASCADE,
+          INDEX idx_availabilities_request (request_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+    })();
+  }
+  return globalForDb.schemaReady;
 }
 
 /**
  * Persists a request and its availabilities atomically — a request must never
  * land without the slots the visitor picked.
  */
-export function insertContactRequest(data: ContactRequest): number {
-  const db = getDb();
+export async function insertContactRequest(
+  data: ContactRequest,
+): Promise<number> {
+  await ensureSchema();
+  const connection = await getPool().getConnection();
 
-  const insertRequest = db.prepare(`
-    INSERT INTO contact_requests
-      (civility, last_name, first_name, email, phone, request_type, message)
-    VALUES
-      (@civility, @lastName, @firstName, @email, @phone, @requestType, @message)
-  `);
+  try {
+    await connection.beginTransaction();
 
-  const insertAvailability = db.prepare(`
-    INSERT INTO availabilities (request_id, day, hour, minute)
-    VALUES (?, ?, ?, ?)
-  `);
+    const [result] = await connection.execute<mysql.ResultSetHeader>(
+      `INSERT INTO contact_requests
+         (civility, last_name, first_name, email, phone, request_type, message)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.civility,
+        data.lastName,
+        data.firstName,
+        data.email,
+        data.phone === "" ? null : data.phone,
+        data.requestType,
+        data.message,
+      ],
+    );
 
-  const run = db.transaction((payload: ContactRequest) => {
-    const { lastInsertRowid } = insertRequest.run({
-      civility: payload.civility,
-      lastName: payload.lastName,
-      firstName: payload.firstName,
-      email: payload.email,
-      phone: payload.phone === "" ? null : payload.phone,
-      requestType: payload.requestType,
-      message: payload.message,
-    });
+    const requestId = result.insertId;
 
-    const requestId = Number(lastInsertRowid);
-    for (const slot of payload.availabilities) {
-      insertAvailability.run(requestId, slot.day, slot.hour, slot.minute);
+    if (data.availabilities.length > 0) {
+      await connection.query(
+        `INSERT INTO availabilities (request_id, day, hour, minute) VALUES ?`,
+        [
+          data.availabilities.map((slot) => [
+            requestId,
+            slot.day,
+            slot.hour,
+            slot.minute,
+          ]),
+        ],
+      );
     }
-    return requestId;
-  });
 
-  return run(data);
+    await connection.commit();
+    return requestId;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }

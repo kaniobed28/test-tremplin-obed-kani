@@ -26,8 +26,8 @@
 .idea
 .vscode
 
-# sqlite database (created on first run)
-/data
+# mysql data volume (bind-mounted by docker-compose)
+/mysql
 
 # debug
 npm-debug.log*

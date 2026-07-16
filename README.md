@@ -1,7 +1,8 @@
 # Contactez l’agence — Test dev web Tremplin
 
 Intégration de la maquette de formulaire de contact de l’agence, en **Next.js 16**,
-avec enregistrement des demandes en base **SQLite**.
+avec enregistrement des demandes en base **MySQL** — celle fournie par le
+`docker-compose.yml` du dépôt.
 
 > Contexte : test technique Tremplin (limite 2 jours). La maquette de référence est
 > disponible dans [`maquette.png`](./maquette.png).
@@ -62,7 +63,8 @@ La maquette est pensée pour le desktop ; les deux colonnes s’empilent sous 10
 | **React Hook Form** | 7 | Gère l’état du formulaire sans re-rendre toute la page à chaque frappe, et expose proprement les erreurs par champ. |
 | **Zod** | 4 | Un schéma unique décrit les règles métier ; il valide côté client **et** côté serveur, donc les deux ne peuvent pas diverger. |
 | **@hookform/resolvers** | 5 | Fait le pont entre Zod et React Hook Form, pour ne pas réécrire les règles de validation dans le formulaire. |
-| **better-sqlite3** | 12 | API synchrone, sans configuration : la base est un simple fichier, le correcteur n’a aucun serveur à installer pour tester le projet. |
+| **MySQL** (Docker) | 8.4 | La base **fournie avec le dépôt** (`docker-compose.yml`). Le sujet laisse le choix de la base ; utiliser celle qui est mise à disposition évite au correcteur d’installer quoi que ce soit d’autre. |
+| **mysql2** | 3.23 | Driver MySQL de référence pour Node : requêtes préparées (donc à l’abri des injections SQL), API `promise` et gestion d’un pool de connexions. |
 | **Montserrat** (next/font) | — | Sans-serif géométrique le plus proche de la typo de la maquette, chargée en self-host par `next/font` (pas de requête vers Google). |
 
 ### Choix structurants
@@ -74,10 +76,17 @@ La maquette est pensée pour le desktop ; les deux colonnes s’empilent sous 10
 - **Validation en double barrière.** Le navigateur valide pour le confort de
   l’utilisateur, mais l’API revalide systématiquement : les données du client ne sont
   jamais dignes de confiance, `curl` peut appeler la route directement.
+- **La base fournie, pas une autre.** Le dépôt livre un `docker-compose.yml` avec MySQL :
+  c’est la base que j’utilise. Je l’ai complété de deux lignes seulement — `MYSQL_DATABASE`
+  (le fichier d’origine ne créait aucune base applicative) et un `healthcheck` (MySQL met
+  une vingtaine de secondes à accepter les connexions au premier démarrage).
 - **Deux tables plutôt qu’un champ texte.** Les disponibilités sont une vraie relation
-  1-N (`availabilities.request_id`), écrite dans la même transaction que la demande.
-  L’agence peut ainsi filtrer les demandes par créneau, ce qu’un JSON aplati dans une
-  colonne interdirait.
+  1-N (`availabilities.request_id`, avec `ON DELETE CASCADE`), écrite dans la même
+  transaction que la demande. L’agence peut ainsi filtrer les demandes par créneau, ce
+  qu’un JSON aplati dans une colonne interdirait.
+- **Requêtes préparées et `utf8mb4`.** Toutes les valeurs passent par des requêtes
+  préparées (`?`), jamais par de la concaténation de chaînes. Les tables sont en
+  `utf8mb4`, vérifié : « Lefèvre » et « J’aimerais… » se relisent à l’identique.
 - **Accessibilité.** Les libellés de la maquette ne vivent que dans les *placeholders* ;
   j’ai gardé de vrais `<label>` (en `sr-only`), des `<fieldset>/<legend>` pour les
   groupes de radios, `aria-invalid` + `role="alert"` sur les erreurs, et des contrôles
@@ -87,20 +96,43 @@ La maquette est pensée pour le desktop ; les deux colonnes s’empilent sous 10
 
 ## Lancement du projet
 
-**Prérequis :** Node.js ≥ 20.
+**Prérequis :** Node.js ≥ 20 et Docker (pour la base MySQL fournie).
 
 ```bash
-# 1. Installer les dépendances
+# 1. Démarrer MySQL — `--wait` rend la main quand la base accepte les connexions
+docker compose up -d --wait
+
+# 2. Installer les dépendances
 npm install
 
-# 2. Lancer en développement
+# 3. Lancer en développement
 npm run dev
 ```
 
 L’application est disponible sur **http://localhost:3000**.
 
-La base SQLite est créée automatiquement au premier envoi, dans `data/contacts.db`
-(le dossier `data/` est ignoré par Git). Aucune migration à lancer.
+Les tables sont créées automatiquement au premier envoi (`CREATE TABLE IF NOT EXISTS`) :
+aucune migration à lancer. Les données MySQL vivent dans `./mysql`, ignoré par Git.
+
+Pour tout arrêter :
+
+```bash
+docker compose down          # arrête la base
+docker compose down && rm -rf mysql   # …et repart d'une base vierge
+```
+
+### Configuration
+
+Les identifiants par défaut sont ceux du `docker-compose.yml`, donc **aucun `.env` n’est
+nécessaire**. Ils restent surchargeables par variables d’environnement :
+
+| Variable | Défaut |
+|---|---|
+| `DB_HOST` | `127.0.0.1` |
+| `DB_PORT` | `3306` |
+| `DB_USER` | `root` |
+| `DB_PASSWORD` | `verysecurepassword` |
+| `DB_NAME` | `majordhom` |
 
 ### Autres commandes
 
@@ -114,9 +146,8 @@ npm run typecheck  # TypeScript, sans émettre de fichiers
 ### Vérifier les données enregistrées
 
 ```bash
-node -e "const d=require('better-sqlite3')('data/contacts.db');\
-console.table(d.prepare('SELECT * FROM contact_requests').all());\
-console.table(d.prepare('SELECT * FROM availabilities').all())"
+docker compose exec db mysql -uroot -pverysecurepassword majordhom \
+  -e "SELECT * FROM contact_requests\G SELECT * FROM availabilities;"
 ```
 
 ### Structure
@@ -133,24 +164,28 @@ src/
 │  └─ Field.tsx              input, textarea, radios et select réutilisables
 └─ lib/
    ├─ schema.ts              schéma Zod partagé client/serveur
-   └─ db.ts                  connexion SQLite, tables, insertion transactionnelle
+   └─ db.ts                  pool MySQL, tables, insertion transactionnelle
 ```
 
 ### Modèle de données
 
 ```
-contact_requests                    availabilities
-─────────────────                   ──────────────
-id            INTEGER PK            id          INTEGER PK
-civility      'mme' | 'm'           request_id  → contact_requests.id (CASCADE)
-last_name     TEXT                  day         TEXT
-first_name    TEXT                  hour        INTEGER
-email         TEXT                  minute      INTEGER
-phone         TEXT NULL
-request_type  'visite' | 'rappel' | 'photos'
+contact_requests                       availabilities
+─────────────────                      ──────────────
+id            INT AI PK                id          INT AI PK
+civility      ENUM('mme','m')          request_id  → contact_requests.id (CASCADE)
+last_name     VARCHAR(80)              day         VARCHAR(10)
+first_name    VARCHAR(80)              hour        TINYINT
+email         VARCHAR(150)             minute      TINYINT
+phone         VARCHAR(20) NULL
+request_type  ENUM('visite','rappel','photos')
 message       TEXT
-created_at    TEXT (datetime UTC)
+created_at    DATETIME
 ```
+
+Les deux tables sont en InnoDB (nécessaire pour les clés étrangères et les transactions)
+et en `utf8mb4`. Les `ENUM` font que la base refuse une valeur hors liste même si elle
+passait la validation applicative.
 
 ### Règles de validation
 
@@ -194,15 +229,18 @@ Oui, principalement **Zod 4** et son intégration à React Hook Form via
 schéma unique, importé à la fois par le composant et par la route d’API, est ce que je
 retiens le plus de cet exercice.
 
-**better-sqlite3** était également nouveau pour moi. Son API synchrone et sa notion de
-transaction (`db.transaction(...)`) m’ont permis de garantir qu’une demande et ses
-créneaux sont écrits ensemble, ou pas du tout.
+**mysql2** était également nouveau pour moi, en particulier la gestion explicite d’une
+transaction (`beginTransaction` / `commit` / `rollback`) et le pool de connexions — qu’il
+faut penser à mettre en cache, sinon le rechargement à chaud de Next.js en ouvre un
+nouveau à chaque modification de fichier jusqu’à saturer MySQL.
 
 J’ai aussi découvert quelques évolutions de **Next.js 16** par rapport aux versions que je
 connaissais : l’App Router et les Route Handlers, et `next/font` qui héberge la police
-localement. J’ai d’ailleurs cru devoir déclarer `better-sqlite3` dans
-`serverExternalPackages` avant de vérifier dans la documentation que Next.js l’exclut déjà
-automatiquement du bundle — la ligne de configuration était donc inutile, et je l’ai retirée.
+localement.
+
+Côté Docker, j’ai appris l’intérêt du couple `healthcheck` / `docker compose up --wait` :
+sans lui, MySQL 8.4 met une vingtaine de secondes avant d’accepter la moindre connexion,
+et l’application démarre plus vite que sa base.
 
 ### Quelle est la place du développement web dans votre cursus de formation ?
 
@@ -231,6 +269,15 @@ Concrètement, à chaque étape :
 - **Relecture** — je lui demande de critiquer mon propre code, ce qui fait remonter des
   oublis utiles (ici, un champ e-mail vide affichait « invalide » au lieu de « requise »).
 
-Ce que je garde pour moi : les choix d’architecture, la modélisation des données, et la
-relecture ligne à ligne. Un LLM produit vite du code plausible ; c’est au développeur de
-vérifier qu’il est *correct*.
+L’exemple le plus parlant de cette limite est arrivé sur ce test. Le `docker-compose.yml`
+du dépôt ne servait à rien tant que je partais sur SQLite, et le LLM a conclu — en citant
+l’historique Git — qu’il s’agissait d’un reliquat, puis l’a supprimé. En allant lire le
+commit moi-même, le raisonnement était faux : ce commit retirait Apache et PhpMyAdmin
+mais **gardait délibérément MySQL**. La base n’était pas un oubli, c’était celle que le
+sujet met à disposition. D’où le choix final de MySQL, et le fichier restauré.
+
+C’est exactement pour ça que je ne délègue pas la décision : l’argument était bien
+construit, la citation d’historique donnait l’air d’une vérification, et la conclusion
+était fausse. Ce que je garde donc pour moi : les choix d’architecture, la modélisation
+des données, et la relecture ligne à ligne. Un LLM produit vite du code plausible ; c’est
+au développeur de vérifier qu’il est *correct*.

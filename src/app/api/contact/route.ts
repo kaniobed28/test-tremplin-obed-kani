@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const id = insertContactRequest(parsed.data);
+    const id = await insertContactRequest(parsed.data);
     return NextResponse.json({ id }, { status: 201 });
   } catch (error) {
     // Log server-side, stay vague client-side.
