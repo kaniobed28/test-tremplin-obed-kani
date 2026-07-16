@@ -65,6 +65,18 @@ que le formulaire est invalide.
 
 ![Message envoyé](./docs/screenshot-succes.png)
 
+### Demandes enregistrées (`/demandes`)
+
+Une page de relecture, pour vérifier depuis le navigateur que les données sont bien
+en base — sans passer par un client SQL. Elle interroge MySQL à chaque requête et
+regroupe chaque demande avec ses disponibilités.
+
+![Demandes enregistrées](./docs/screenshot-demandes.png)
+
+> Dans une vraie agence, ce back-office serait derrière une authentification. Sur la
+> démo publique la page est ouverte mais en `noindex`, et signale de ne pas y saisir
+> de vraies coordonnées.
+
 ### Version mobile
 
 La maquette est pensée pour le desktop ; les deux colonnes s’empilent sous 1024 px.
@@ -180,6 +192,7 @@ docker compose exec db mysql -uroot -pverysecurepassword majordhom \
 src/
 ├─ app/
 │  ├─ api/contact/route.ts   POST : valide puis enregistre une demande
+│  ├─ demandes/page.tsx      relecture des demandes enregistrées
 │  ├─ layout.tsx             police, <html lang="fr">, métadonnées
 │  └─ page.tsx               la carte, la photo de fond et le voile
 ├─ components/
