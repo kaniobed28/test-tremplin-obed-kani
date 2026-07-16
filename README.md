@@ -16,10 +16,25 @@ avec enregistrement des demandes en base **MySQL** — celle fournie par le
 | **Nom / Prénom** | Kani Obed |
 | **Formation** | Bac+5 — Master 2 informatique |
 | **Durée de stage souhaitée** | 6 mois |
+| **Portfolio** | [obed-kani.netlify.app](https://obed-kani.netlify.app/) |
 | **GitHub** | [github.com/kaniobed28](https://github.com/kaniobed28) |
-| **LinkedIn** | ⚠️ _à compléter : URL LinkedIn_ |
-| **Portfolio** | ⚠️ _à compléter : URL du portfolio_ |
-| **Autre projet** | Campus Sell — ⚠️ _à compléter : lien du dépôt ou de l’app_ |
+| **LinkedIn** | [linkedin.com/in/kani-obed](https://www.linkedin.com/in/kani-obed) |
+
+### Quelques projets
+
+Plus d’une dizaine de projets déployés ; les plus représentatifs :
+
+| Projet | Stack | Liens |
+|---|---|---|
+| **Campus Sell** — marketplace étudiante | v1 Flutter + Firebase ; v2 Next.js, Laravel (PHP), Supabase | [client](https://campus-sell-client.vercel.app/) · [vendeur](https://campus-sell-seller.vercel.app/) · [admin](https://campus-sell-admin.vercel.app/) |
+| **Trendy Sky** — boutique de vêtements en ligne | Next.js, Firebase | [trendy-sky-web-frontend.vercel.app](https://trendy-sky-web-frontend.vercel.app/) |
+| **COP Lille** — plateforme pour une organisation COP | Next.js | [lille-city-church.vercel.app](https://lille-city-church.vercel.app/) |
+| **FlashCard** — cartes mémo pour l’apprentissage des langues | React, Firebase | [mfcard.vercel.app](https://mfcard.vercel.app/) |
+
+Campus Sell est le plus proche de cet exercice : une marketplace en trois interfaces
+(client, vendeur, administration), que j’ai reprise de zéro en Next.js après une première
+version Flutter — donc le même travail qu’ici de formulaires, de validation et de
+modélisation de données, mais à plus grande échelle.
 
 ---
 
@@ -245,10 +260,19 @@ et l’application démarre plus vite que sa base.
 ### Quelle est la place du développement web dans votre cursus de formation ?
 
 Le développement web occupe une place centrale dans mon cursus : c’est le support de la
-plupart de mes projets, aussi bien côté front (JavaScript/TypeScript, React) que côté
-back (API, bases de données). Je le pratique également en dehors des cours, sur mes
-projets personnels comme **Campus Sell**, ce qui me permet de confronter la théorie vue
-en formation à de vrais utilisateurs et à de vraies contraintes.
+plupart de mes projets, aussi bien côté front (JavaScript/TypeScript, React, Next.js) que
+côté back (API, bases de données).
+
+C’est surtout hors des cours qu’il prend toute sa place : j’ai déployé plus d’une dizaine
+de projets (voir [Quelques projets](#quelques-projets) plus haut). **Campus Sell** est le
+plus formateur — une marketplace étudiante que j’ai d’abord écrite en Flutter/Firebase,
+puis entièrement reprise en Next.js avec Laravel et Supabase. Refaire un produit existant
+apprend surtout ce que le premier jet avait mal modélisé.
+
+Cette pratique m’a aussi confronté à des stacks variées — Firebase, Supabase, Laravel, et
+MySQL ici — ce qui m’a appris à me caler sur la stack d’un projet plutôt que sur mes
+préférences. C’est exactement la démarche suivie sur ce test : le dépôt fournissait MySQL,
+c’est donc MySQL que j’utilise.
 
 ### Avez-vous utilisé un LLM ? Si oui, comment intégrez-vous les LLM à chaque étape de votre workflow ?
 
