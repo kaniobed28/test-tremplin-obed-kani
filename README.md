@@ -4,8 +4,14 @@ Intégration de la maquette de formulaire de contact de l’agence, en **Next.js
 avec enregistrement des demandes en base **MySQL** — celle fournie par le
 `docker-compose.yml` du dépôt.
 
+**▶ Démo en ligne : [test-tremplin-obed-kani.vercel.app](https://test-tremplin-obed-kani.vercel.app)**
+
 > Contexte : test technique Tremplin (limite 2 jours). La maquette de référence est
 > disponible dans [`maquette.png`](./maquette.png).
+>
+> La démo tourne sur Vercel avec une base MySQL hébergée (Railway), branchée via la
+> variable `DATABASE_URL`. **Le code est identique** : en local, sans variable
+> d’environnement, l’application vise le MySQL du `docker-compose.yml` fourni.
 
 ---
 
@@ -141,13 +147,16 @@ docker compose down && rm -rf mysql   # …et repart d'une base vierge
 Les identifiants par défaut sont ceux du `docker-compose.yml`, donc **aucun `.env` n’est
 nécessaire**. Ils restent surchargeables par variables d’environnement :
 
-| Variable | Défaut |
-|---|---|
-| `DB_HOST` | `127.0.0.1` |
-| `DB_PORT` | `3306` |
-| `DB_USER` | `root` |
-| `DB_PASSWORD` | `verysecurepassword` |
-| `DB_NAME` | `majordhom` |
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `DATABASE_URL` | _(vide)_ | `mysql://user:pass@host:port/base`. Prioritaire si définie — c’est ainsi que la démo en ligne se connecte à MySQL. |
+| `DB_HOST` | `127.0.0.1` | Utilisées uniquement si `DATABASE_URL` est absente. |
+| `DB_PORT` | `3306` | |
+| `DB_USER` | `root` | |
+| `DB_PASSWORD` | `verysecurepassword` | |
+| `DB_NAME` | `majordhom` | |
+| `DB_SSL` | `false` | `true` pour les hébergeurs qui imposent TLS. |
+| `DB_POOL_SIZE` | `3` | Volontairement bas : en serverless, chaque instance ouvre son propre pool. |
 
 ### Autres commandes
 

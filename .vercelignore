@@ -1,0 +1,9 @@
+# Local MySQL data volume (bind-mounted by docker-compose) — ~200 Mo, jamais déployé.
+/mysql
+
+# Captures d'écran du README : utiles sur GitHub, inutiles au build.
+/docs
+/maquette.png
+
+.next
+node_modules
