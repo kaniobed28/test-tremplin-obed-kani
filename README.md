@@ -26,7 +26,7 @@ Plus d’une dizaine de projets déployés ; les plus représentatifs :
 
 | Projet | Stack | Liens |
 |---|---|---|
-| **Campus Sell** — marketplace étudiante | v1 Flutter + Firebase ; v2 Next.js, Laravel (PHP), Supabase | [client](https://campus-sell-client.vercel.app/) · [vendeur](https://campus-sell-seller.vercel.app/) · [admin](https://campus-sell-admin.vercel.app/) |
+| **Campus Sell** — marketplace étudiante | v1 Flutter + Firebase ; v2 Next.js, Laravel (PHP), Supabase pour l’authentification | [client](https://campus-sell-client.vercel.app/) · [vendeur](https://campus-sell-seller.vercel.app/) · [admin](https://campus-sell-admin.vercel.app/) |
 | **Trendy Sky** — boutique de vêtements en ligne | Next.js, Firebase | [trendy-sky-web-frontend.vercel.app](https://trendy-sky-web-frontend.vercel.app/) |
 | **COP Lille** — plateforme pour une organisation COP | Next.js | [lille-city-church.vercel.app](https://lille-city-church.vercel.app/) |
 | **FlashCard** — cartes mémo pour l’apprentissage des langues | React, Firebase | [mfcard.vercel.app](https://mfcard.vercel.app/) |
