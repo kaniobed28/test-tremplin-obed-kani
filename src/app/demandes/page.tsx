@@ -5,6 +5,9 @@ import { formatAvailability, type Availability } from "@/lib/schema";
 
 export const metadata = {
   title: "Demandes enregistrées",
+  // Dans une vraie agence cette page serait derrière une authentification.
+  // Ici elle est ouverte pour la démo, mais jamais indexée.
+  robots: { index: false, follow: false },
 };
 
 const REQUEST_LABELS: Record<StoredRequest["request_type"], string> = {
@@ -56,6 +59,13 @@ export default async function DemandesPage() {
             ← Retour au formulaire
           </Link>
         </header>
+
+        <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-200">
+          <strong>Page de démonstration.</strong> Elle sert à vérifier que les
+          données sont bien enregistrées. Dans une vraie agence, ce back-office
+          serait derrière une authentification — ici la démo est publique, donc
+          n’y saisissez pas de vraies coordonnées.
+        </p>
 
         {requests.length === 0 ? (
           <div className="rounded-3xl bg-white p-10 text-center shadow-sm">
