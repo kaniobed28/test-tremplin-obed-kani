@@ -89,8 +89,7 @@ La maquette est pensée pour le desktop ; les deux colonnes s’empilent sous 10
 
 | Outil | Version | Pourquoi ce choix |
 |---|---|---|
-| **Next.js** (App Router) | 16.2 | Le front **et** l’API dans un seul projet : le formulaire et la route d’enregistrement partagent le même code de validation, sans serveur séparé à déployer. |
-| **React** | 19.2 | Imposé par Next.js 16, et le modèle à composants correspond bien aux éléments répétés de la maquette (champs, puces de disponibilité). |
+| **Next.js** (App Router) — donc **React 19.2** | 16.2 | Le framework du projet. Next.js *est* un framework React (React en est une dépendance obligatoire), ce n’est pas une alternative à React : le choix se faisait donc entre React seul (Vite) et Next.js. Next.js l’emporte parce qu’il met le front **et** l’API dans un seul projet : le formulaire et la route d’enregistrement importent le même schéma de validation, sans serveur séparé à déployer. |
 | **TypeScript** | 5 | Le typage détecte les erreurs de contrat entre le formulaire, l’API et la base au moment de la compilation plutôt qu’en production. |
 | **Tailwind CSS** | 4 | La maquette demande beaucoup d’ajustements précis (rayons, espacements, voile sombre) : les classes utilitaires évitent d’inventer des noms de classes pour du style non réutilisable. |
 | **React Hook Form** | 7 | Gère l’état du formulaire sans re-rendre toute la page à chaque frappe, et expose proprement les erreurs par champ. |
