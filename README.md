@@ -6,7 +6,7 @@ avec enregistrement des demandes en base **MySQL** — celle fournie par le
 
 **▶ Démo en ligne : [test-tremplin-obed-kani.vercel.app](https://test-tremplin-obed-kani.vercel.app)**
 
-> Contexte : test technique Tremplin (limite 2 jours). La maquette de référence est
+> Contexte : test technique Tremplin (3 jours). La maquette de référence est
 > disponible dans [`maquette.png`](./maquette.png).
 >
 > La démo tourne sur Vercel avec une base MySQL hébergée (Railway), branchée via la
