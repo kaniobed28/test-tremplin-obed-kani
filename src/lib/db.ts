@@ -4,14 +4,38 @@ import type { ContactRequest } from "./schema";
 /**
  * Connection settings default to the docker-compose service, so the project
  * runs with `docker compose up -d && npm run dev` and no .env file.
+ *
+ * DATABASE_URL takes precedence when set: hosted providers hand out a single
+ * `mysql://user:password@host:port/database` string, and that is what the
+ * online demo runs on.
  */
-const config = {
-  host: process.env.DB_HOST ?? "127.0.0.1",
-  port: Number(process.env.DB_PORT ?? 3306),
-  user: process.env.DB_USER ?? "root",
-  password: process.env.DB_PASSWORD ?? "verysecurepassword",
-  database: process.env.DB_NAME ?? "majordhom",
-};
+function buildConfig(): mysql.PoolOptions {
+  const base: mysql.PoolOptions = {
+    waitForConnections: true,
+    // Deliberately small: serverless opens a pool per instance, and free
+    // MySQL tiers cap total connections low.
+    connectionLimit: Number(process.env.DB_POOL_SIZE ?? 3),
+    supportBigNumbers: true,
+    dateStrings: true,
+    // Hosted MySQL requires TLS; docker-compose on localhost does not.
+    ...(process.env.DB_SSL === "true"
+      ? { ssl: { rejectUnauthorized: true } }
+      : {}),
+  };
+
+  if (process.env.DATABASE_URL) {
+    return { ...base, uri: process.env.DATABASE_URL };
+  }
+
+  return {
+    ...base,
+    host: process.env.DB_HOST ?? "127.0.0.1",
+    port: Number(process.env.DB_PORT ?? 3306),
+    user: process.env.DB_USER ?? "root",
+    password: process.env.DB_PASSWORD ?? "verysecurepassword",
+    database: process.env.DB_NAME ?? "majordhom",
+  };
+}
 
 /**
  * Next.js hot-reloads modules in dev, which would open a new pool on every
@@ -24,15 +48,7 @@ const globalForDb = globalThis as unknown as {
 
 export function getPool(): mysql.Pool {
   if (!globalForDb.pool) {
-    globalForDb.pool = mysql.createPool({
-      ...config,
-      waitForConnections: true,
-      connectionLimit: 10,
-      // Availabilities are inserted with a multi-row VALUES list, so the
-      // driver must keep numbers as numbers rather than strings.
-      supportBigNumbers: true,
-      dateStrings: true,
-    });
+    globalForDb.pool = mysql.createPool(buildConfig());
   }
   return globalForDb.pool;
 }
