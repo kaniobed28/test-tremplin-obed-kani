@@ -84,10 +84,13 @@ export function AvailabilityPicker({ value, onChange, error }: Props) {
           onChange={(minute) => setDraft({ ...draft, minute: Number(minute) })}
           options={minuteOptions}
         />
+        {/* Pill, not a circle: in the mockup this button is 82x30 and shares
+            the exact height of the selects next to it. Purple sampled from
+            maquette.png. */}
         <button
           type="button"
           onClick={addDraft}
-          className="ml-1 size-[52px] rounded-full bg-violet-700 text-[10px] font-bold uppercase leading-tight text-white transition hover:bg-violet-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          className="ml-1 h-9 shrink-0 rounded-full bg-[#3f1486] px-4 text-[10px] font-bold uppercase leading-[1.1] text-white transition hover:bg-[#4d1ba3] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           Ajouter
           <br />
