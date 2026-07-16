@@ -100,11 +100,11 @@ export function RadioGroup<T extends string>({
   return (
     <fieldset aria-describedby={error ? errorId : undefined}>
       <legend className="sr-only">{legend}</legend>
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {options.map((option) => (
           <label
             key={option.value}
-            className="group flex cursor-pointer items-center gap-2 text-sm text-white"
+            className="group flex cursor-pointer items-center gap-2 whitespace-nowrap text-[13px] text-white"
           >
             <span className="relative flex size-4 items-center justify-center">
               <input

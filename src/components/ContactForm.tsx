@@ -110,7 +110,8 @@ export function ContactForm() {
         Contactez l’agence
       </h1>
 
-      <div className="grid gap-x-10 gap-y-7 lg:grid-cols-2">
+      {/* Mockup proportions: coordinates column narrower than the message column. */}
+      <div className="grid gap-x-10 gap-y-7 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
         {/* ---------------- Coordonnées ---------------- */}
         <section>
           <h2 className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-white">
@@ -220,7 +221,9 @@ export function ContactForm() {
         />
 
         {/* ---------------- Envoi ---------------- */}
-        <div className="flex flex-col items-stretch justify-end gap-3 lg:items-end lg:justify-start lg:self-start">
+        {/* lg:mt-7 offsets the "Disponibilités" heading so Envoyer lines up
+            with the dispo selects, as in the mockup. */}
+        <div className="flex flex-col items-stretch gap-3 lg:mt-7 lg:items-end lg:self-start">
           <button
             type="submit"
             disabled={isSubmitting}

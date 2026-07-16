@@ -66,11 +66,13 @@ export const contactRequestSchema = z
       .trim()
       .min(1, "Le prénom est requis")
       .max(80, "Le prénom est trop long"),
+    // Piped so an empty field reads "requise" rather than "invalide".
     email: z
-      .email("Adresse mail invalide")
+      .string()
       .trim()
       .min(1, "L’adresse mail est requise")
-      .max(150, "L’adresse mail est trop longue"),
+      .max(150, "L’adresse mail est trop longue")
+      .pipe(z.email("Adresse mail invalide")),
     phone: z
       .string()
       .trim()

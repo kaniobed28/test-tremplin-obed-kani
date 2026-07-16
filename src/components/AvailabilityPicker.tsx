@@ -20,7 +20,7 @@ const dayOptions = DAYS.map((day) => ({ value: day, label: day }));
 const hourOptions = HOURS.map((hour) => ({ value: hour, label: `${hour}h` }));
 const minuteOptions = MINUTES.map((minute) => ({
   value: minute,
-  label: `${String(minute).padStart(2, "0")}m`,
+  label: `${minute}m`,
 }));
 
 export function AvailabilityPicker({ value, onChange, error }: Props) {

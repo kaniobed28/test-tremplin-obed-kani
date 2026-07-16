@@ -15,7 +15,7 @@ export default function Home() {
           className="object-cover"
         />
         {/* Warm scrim: keeps the white controls readable over the photo. */}
-        <div className="absolute inset-0 bg-[#4a342a]/70" />
+        <div className="absolute inset-0 bg-[#4a342a]/75" />
 
         <div className="relative p-6 sm:p-10">
           <ContactForm />
