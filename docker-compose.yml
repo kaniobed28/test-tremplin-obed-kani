@@ -1,5 +1,3 @@
-version: '1'
-
 services:
   # MYSQL
   db:
@@ -10,3 +8,13 @@ services:
       - "3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=verysecurepassword
+      # Ajouté : le fichier d'origine ne créait aucune base applicative.
+      - MYSQL_DATABASE=majordhom
+    # Ajouté : MySQL met ~20s à accepter les connexions au premier démarrage.
+    # `docker compose up -d --wait` s'appuie dessus pour rendre la main au bon moment.
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
